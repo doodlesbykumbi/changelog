@@ -12,4 +12,6 @@ Usage of changelog:
         lists all versions
   -list-output string
         how to render the list. enum: 'raw' or 'markdown' (default "raw")
+  -release string
+        version to release
 ```

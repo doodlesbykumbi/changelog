@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var linkLinesRegex = regexp.MustCompile(`(?m)^\s+(?:^\[[^]]+]:[ \t]+.*$\s+)+`)
@@ -17,6 +18,7 @@ var multipleEmptyLines = regexp.MustCompile(`(?m)^\s+^\s*`)
 
 func main() {
 	listVersionsFlag := flag.Bool("list", false, "lists all versions")
+	releaseFlag := flag.String("release", "", "version to release")
 	listOutputFlag := flag.String("list-output", "raw", "how to render the list. enum: 'raw' or 'markdown'")
 	getVersionFlag := flag.String("get", "", "get specific version or versions within closed interval e.g. 0.1.1 or 0.1.1,0.1.2")
 	getOutputFlag := flag.String("get-output", "raw", "how to render version output. enum: 'raw' or 'merged'")
@@ -37,6 +39,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to read file")
 	}
+
+	rawFileContents := fileContents
 
 	linksText := strings.TrimSpace(
 		string(
@@ -63,6 +67,26 @@ func main() {
 	if len(versions) == 0 {
 		fmt.Println("No versions found. Nothing to do here!")
 		os.Exit(1)
+	}
+
+	if len(*releaseFlag) > 0 {
+		newVersion := *releaseFlag
+		oldVersion := versions[1].Label
+
+		output := string(rawFileContents)
+
+		output = regexp.MustCompile("(\\[Unreleased]:)(.*)(/v.*HEAD)").ReplaceAllString(
+			output,
+			"$1$2/v" + newVersion + "...HEAD\n[" + newVersion + "]:$2/v" + oldVersion + "..." + newVersion,
+		)
+		output = regexp.MustCompile("## \\[Unreleased]").ReplaceAllString(
+			output,
+			`## [Unreleased]
+
+## [` + newVersion + "] - " + time.Now().Format("2006-01-02"))
+
+		fmt.Println(output)
+		return
 	}
 
 	if *listVersionsFlag {
